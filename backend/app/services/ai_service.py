@@ -2,24 +2,21 @@ from pathlib import Path
 
 from ultralytics import YOLO
 
-from app.config import settings
-from app.services.segregation_model import DISPOSAL_GUIDE, predict_segregation, load_segregation_model
+from app.services.model_integrity import prepare_model_paths
+from app.services.segregation_model import DISPOSAL_GUIDE, load_segregation_model, predict_segregation
 
 _illegal_model: YOLO | None = None
 
 
 def init_models() -> None:
     global _illegal_model
-    illegal_path = Path(settings.illegal_waste_model)
-    if not illegal_path.is_absolute():
-        illegal_path = Path(__file__).resolve().parent.parent.parent / illegal_path
-
-    seg_path = Path(settings.segregation_model)
-    if not seg_path.is_absolute():
-        seg_path = Path(__file__).resolve().parent.parent.parent / seg_path
-
+    illegal_path, seg_path = prepare_model_paths()
     _illegal_model = YOLO(str(illegal_path))
     load_segregation_model(seg_path)
+
+
+def models_ready() -> bool:
+    return _illegal_model is not None
 
 
 def detect_illegal_waste(image_path: Path) -> dict:

@@ -1,0 +1,9 @@
+# SHA-256 of original EcoTrack model weights (do not modify the weight files).
+# Algorithm: SHA256
+# Recorded before deployment preparation.
+
+illegal_waste/best.pt
+126704D854E4F16FFFC1471709B2429DCDAE03806C4090C0B919080612583027
+
+segregation/best_model_epoch_12.pth
+34554A5DB8D8363605DBBC64F9D120F65A13B6DC259F9CF2AC5C70A14B2AD05C

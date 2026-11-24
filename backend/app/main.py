@@ -1,15 +1,19 @@
 from contextlib import asynccontextmanager
-from pathlib import Path
 
-from fastapi import APIRouter, Depends, FastAPI
+from fastapi import APIRouter, Depends, FastAPI, HTTPException, Request
+from fastapi.exception_handlers import http_exception_handler, request_validation_exception_handler
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.config import settings
 from app.database import close_db, connect_db, get_db
 from app.routers import admin, ai, auth, complaints, ewaste, notifications, segregation
 from app.seed import seed_database
-from app.services.ai_service import init_models
+from app.services.ai_service import init_models, models_ready
+from app.services.model_integrity import verified_hashes
 from app.utils.security import get_current_user
 
 router = APIRouter(prefix="/api/dashboard", tags=["Dashboard"])
@@ -64,21 +68,41 @@ async def user_dashboard_stats(current_user: dict = Depends(get_current_user)):
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await connect_db()
-    await seed_database()
+    try:
+        await seed_database()
+    except Exception as e:
+        print(f"Database seed notice: {e}")
+        if settings.environment.lower() == "production":
+            raise
     try:
         init_models()
     except Exception as e:
-        print(f"Warning: AI models failed to load: {e}")
+        print("AI models failed to load.")
+        if settings.environment.lower() == "production":
+            raise
+        print(f"Warning: continuing without models in {settings.environment}: {type(e).__name__}")
     yield
     await close_db()
 
+
+_docs = "/docs" if settings.docs_enabled else None
+_redoc = "/redoc" if settings.docs_enabled else None
 
 app = FastAPI(
     title="EcoTrack API",
     description="AI-Powered Smart Waste Management & E-Waste Recycling Platform",
     version="1.0.0",
     lifespan=lifespan,
+    docs_url=_docs,
+    redoc_url=_redoc,
 )
+
+
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception):
+    if isinstance(exc, HTTPException):
+        return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
+    return JSONResponse(status_code=500, content={"detail": "Internal server error"})
 
 app.add_middleware(
     CORSMiddleware,
@@ -103,4 +127,10 @@ app.include_router(router)
 
 @app.get("/api/health")
 async def health():
-    return {"status": "ok", "service": "EcoTrack API"}
+    hashes = verified_hashes()
+    return {
+        "status": "ok",
+        "service": "EcoTrack API",
+        "models_loaded": models_ready(),
+        "model_hashes_verified": bool(hashes),
+    }

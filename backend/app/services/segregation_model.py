@@ -35,6 +35,11 @@ class SegregationNet(nn.Module):
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.backbone(x)
 
+    def load_state_dict(self, state_dict: dict, strict: bool = True):
+        if any(k.startswith("backbone.") for k in state_dict.keys()):
+            return super().load_state_dict(state_dict, strict=strict)
+        return self.backbone.load_state_dict(state_dict, strict=strict)
+
 
 _transform = transforms.Compose(
     [
@@ -52,7 +57,8 @@ def load_segregation_model(model_path: Path) -> None:
     global _model
     _model = SegregationNet(num_classes=len(SEGREGATION_CLASSES))
     checkpoint = torch.load(model_path, map_location=_device, weights_only=False)
-    _model.load_state_dict(checkpoint["model_state_dict"])
+    state_dict = checkpoint.get("model_state_dict", checkpoint) if isinstance(checkpoint, dict) else checkpoint
+    _model.load_state_dict(state_dict, strict=True)
     _model.to(_device)
     _model.eval()
 

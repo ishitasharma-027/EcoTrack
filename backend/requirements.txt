@@ -16,3 +16,4 @@ torchvision==0.20.1
 numpy==2.2.1
 aiofiles==24.1.0
 email-validator==2.2.0
+httpx==0.28.1

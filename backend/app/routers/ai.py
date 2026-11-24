@@ -10,7 +10,8 @@ router = APIRouter(prefix="/api", tags=["AI Detection"])
 
 
 def _resolve_image(relative_path: str) -> Path:
-    return settings.upload_path / relative_path.replace("/", "\\")
+    parts = relative_path.replace("\\", "/").split("/")
+    return settings.upload_path.joinpath(*parts)
 
 
 @router.post("/detect-illegal-waste")

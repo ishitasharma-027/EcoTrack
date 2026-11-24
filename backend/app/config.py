@@ -1,5 +1,11 @@
+import os
+import tempfile
 from pathlib import Path
+
 from pydantic_settings import BaseSettings
+
+os.environ.setdefault("MPLCONFIGDIR", tempfile.gettempdir())
+os.environ.setdefault("YOLO_CONFIG_DIR", tempfile.gettempdir())
 
 
 class Settings(BaseSettings):
@@ -14,6 +20,13 @@ class Settings(BaseSettings):
     cors_origins: str = "http://localhost:3000"
     admin_email: str = "admin@ecotrack.com"
     admin_password: str = "Admin@123"
+    environment: str = "development"
+    docs_enabled: bool = True
+    max_upload_bytes: int = 10 * 1024 * 1024
+    illegal_waste_model_url: str = ""
+    segregation_model_url: str = ""
+    illegal_waste_model_sha256: str = ""
+    segregation_model_sha256: str = ""
 
     class Config:
         env_file = ".env"
